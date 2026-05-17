@@ -59,31 +59,51 @@ def auditor_node(state: ProcurementState):
     time.sleep(2) 
 
     extracted = state.get('extracted_data', {})
-    item = extracted.get('item_name', 'unknown item')
-    origin = extracted.get('origin', 'unknown origin')
+    item_name = extracted.get('item_name', 'item')
+    origin = extracted.get('origin', 'unknown')
     total_cost = state.get('total_base_cost', 0) # Get the number we calculated
 
     # 1. THE RAG STEP: Fetch actual rules from your PDFs
-    search_query = f"What are the procurement policies for {item} costing {total_cost} KWD and origin also {origin}?"
-    actual_policies = get_relevant_policy(search_query)
+    # ORCHESTRATE DUAL SEARCH
+   
+    # Search A: Item & Financials
+    query_a = f"Policies for {item_name} costing {total_cost} KWD"
+    policies_a = get_relevant_policy(query_a)
+    
+    # Search B: Legal & Origin
+    query_b = f"Legal requirements for procurement from {origin} and international vendors"
+    policies_b = get_relevant_policy(query_b)
+    
+    combined_policies = f"--- FINANCIAL & ITEM POLICIES ---\n{policies_a}\n\n--- LEGAL & ORIGIN POLICIES ---\n{policies_b}"
 
-    # 2. SYSTEM INSTRUCTION: Strict JSON enforcement
+    # 2. ENHANCED SYSTEM INSTRUCTION
     auditor_instruction = f"""
-    OBJECTIVE: You are the PDF policy checker. 
-    Compare the User Request against the REFERENCE POLICIES provided.
+    OBJECTIVE: You are a strict Compliance Auditor. 
+    Compare the User Request against the REFERENCE POLICIES provided below.
     
     REFERENCE POLICIES:
-    {actual_policies}
+    {combined_policies}
     
-    CRITICAL RULES:
-    1. If the request breaks a rule (e.g., wrong brand, exceeds KWD limit without quotes), status is "VIOLATES".
-    2. Provide a detailed explanation in the 'reason' field citing the specific policy.
-    3. Return ONLY valid JSON.
+    AUDIT PROTOCOL:
+    1. BRAND CHECK: Is the requested brand approved?
+    2. FINANCIAL CHECK: Does the total cost ({total_cost} KWD) exceed thresholds requiring multiple quotes?
+    3. ORIGIN CHECK: Since the origin is '{origin}', does the policy mandate a 'Local Kuwaiti Agent'? 
+       If a local agent is required for {origin} and the request doesn't mention one, you MUST mark as VIOLATES.
+
+    OUTPUT RULES:
+    - If ANY rule is broken, status is "VIOLATES".
+    - In the 'reason' field, list every specific breach found.
+    - Return ONLY valid JSON.
     """
 
-    # 3. LLM CALL with JSON Schema
-    prompt = f"User Request: {extracted}. Total Cost: {total_cost}. Does this comply?"
-    
+    # 3. FINAL PROMPT
+    prompt = (
+        f"ANALYZE THIS REQUEST:\n"
+        f"Item: {item_name}\n"
+        f"Origin: {origin}\n"
+        f"Total Cost: {total_cost} KWD\n\n"
+        "Does this comply with all financial, brand, and international vendor policies?"
+    )
     response = client.models.generate_content(
         model="gemini-2.5-flash", 
         config={
