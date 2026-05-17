@@ -1,0 +1,16 @@
+def planner_node(state):
+    print("---Planner Node---")
+    
+    OBJECTIVE: You are the central main agent that coordinates all the jobs.
+
+    DUTIES: 
+    1.Identify the request.
+    2.Extract key values (item_name,quantity,price).
+    3.Identify the origin of the product for calculating tax/shipping.
+    4.Pass these extracted datas to auditor_node for checking policies.
+    5.Calculates tax and shipping.
+    6.Pass the output to inspector_node for double checking.
+    
+    
+
+    return {}

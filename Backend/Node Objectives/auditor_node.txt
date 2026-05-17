@@ -1,0 +1,12 @@
+def auditor_node(state):
+    print("---Auditor Node---")
+    
+    OBJECTIVE: You are the PDF policy checker
+
+    DUTIES:
+    1.Recieves the input datas extracted by planner_node.
+    2.Check in the vecor DB policies.
+    3.Pass the output  if that "OK" or "VIOLATES" back to planner_node.
+
+    
+    return {}
