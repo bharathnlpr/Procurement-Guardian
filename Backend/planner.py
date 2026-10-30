@@ -39,20 +39,7 @@ def planner_node(state: ProcurementState):
         return state
     
     
-    # 2. THE TOTAL COST (Before Audit)
-    if state.get("extracted_data") and not state.get("total_base_cost"):
-        print("Planner: 🧮 Calculating Base Total for the Auditor...")
-        qty = state['extracted_data'].get('quantity', 0)
-        price = state['extracted_data'].get('unit_price', 0)
-        base_total = qty * price
-        
-        return {
-            "extracted_data": {**state['extracted_data'], "total_base_cost": base_total},
-            "total_base_cost": base_total, # <--- ADD THIS: Sync with main state
-            "internal_reasoning": [f"Planner: Calculated base total of {base_total} KWD."]
-        }
-    
-    
+   
     # 3. THE DUTY CALCULATOR (After Audit "OK")
     if state.get("audit_status") == "OK" and not state.get("final_cost_with_duty"):
         print("Planner: ✅ Policy OK. Calling Tool for Import Duty...")
@@ -105,7 +92,6 @@ def planner_node(state: ProcurementState):
     RULES:
         1. 'unit_price' MUST be a FLOAT (e.g., 350.0). Remove all currency symbols like 'KWD'.
         2. 'quantity' MUST be an INTEGER.
-        3. Calculate 'total_base_cost' mathematically (quantity * unit_price).
     
     """
 
@@ -118,7 +104,9 @@ def planner_node(state: ProcurementState):
 
     # 8. OUTPUT: Extract the raw JSON and the calculated total
     extracted_json = json.loads(response.text)
-    base_val = extracted_json.get("total_base_cost", 0)
+    qty = extracted_json.get("quantity", 0)
+    price = extracted_json.get("unit_price", 0.0)
+    base_val = qty * price  # <-- Pure Python arithmetic (100% reliable)
 
     return {
         "extracted_data": extracted_json,
